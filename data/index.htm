@@ -1,0 +1,27 @@
+<!DOCTYPE HTML><html><head>
+  <title>Configure network settings</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  </head><body>
+  <form action="config" method="post" accept-charset="utf-8">
+    <table>
+        %CONFIG_FIELDS%
+    </table>
+    <input type="submit" value="Submit">
+  </form>
+  &nbsp
+  &nbsp
+  <form action="save" method="post">
+    <table>
+    <tr><td>To be saved<td><br>
+        %REPORT_FIELDS%
+    </table>
+    <input type="submit" value="Save">    
+  </form>
+  %CONFIG_SAVED%
+  <form action="reset" method="post">
+  <input type="submit" value="Clear Config"> 
+  </form>
+  <form action="reboot" method="post">
+  <input type="submit" value="reboot device"> 
+  </form>
+</body></html>
