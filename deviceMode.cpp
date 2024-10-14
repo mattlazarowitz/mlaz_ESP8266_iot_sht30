@@ -97,21 +97,34 @@ bool MqttConnectWithTimeout(unsigned long Timeout){
 // TODO: Consider increasing sleep times in the event of a connection timeout.
 //
 void DevModeWifi(devRtcData* data) {
-  String SsidStr = (char*)data->state.state.fwconfig.ssid;
-  if(SsidStr.equals(static_cast<String>(jsonConfig["ssid"]))){
-    Serial.print("saved state matches config, restoring connection to ");
-    Serial.println(static_cast<String>(jsonConfig["ssid"]));
-    if (!WiFi.resumeFromShutdown(data->state)) {
-      // Failed to restore state, do a regular connect.
-      WiFi.persistent(false); 
-      //invalidate the state data in case we fail a regular connect too.
-      data->state.state.fwconfig.ssid[0] = 0;
-      WiFi.hostname(static_cast<String>(jsonConfig["ssid"]));
-      WiFi.mode(WIFI_STA);
-      WiFi.begin(static_cast<String>(jsonConfig["ssid"]), static_cast<String>(jsonConfig["pw"]));
+  const char* config_ssid = jsonConfig["ssid"];
+  const char* config_pw = jsonConfig["WiFiPw"];
+  const char* config_hostname = jsonConfig["hostname"];
+  boolean isConnectionRestored = false;
+  if (data != nullptr) {
+    Serial.println("trying to restore WiFi state");
+    String SsidStr = (char*)data->state.state.fwconfig.ssid;
+    if(SsidStr.equals(config_ssid)){
+      Serial.print("saved state matches config, restoring connection to ");
+      Serial.println(config_ssid);
+      if (WiFi.resumeFromShutdown(data->state)) {
+        isConnectionRestored = true;
+      }
     }
-  } else {
-    WiFi.begin(static_cast<String>(jsonConfig["ssid"]), static_cast<String>(jsonConfig["WiFiPw"]));
+  }
+  if (!isConnectionRestored) {
+    Serial.print("regular wifi connection: ");
+    Serial.printf("%s\r\n",static_cast<String>(jsonConfig["ssid"]));
+    WiFi.persistent(false);
+    Serial.print("setting hostname: ");
+    Serial.println(config_hostname);
+    WiFi.hostname(config_hostname);
+    WiFi.mode(WIFI_STA);
+    Serial.println("wifi.begin()");
+    WiFi.begin(config_ssid, config_pw);
+    if (data != nullptr) {
+      data->state.state.fwconfig.ssid[0] = 0;
+    }
   }
 
   while (WiFi.status() != WL_CONNECTED) {
@@ -189,7 +202,6 @@ void setupDevMode()
 
 
   Serial.println("dev mode connect to wifi");
-  DevModeWifi(rtcMemIface.getData());
   MqttConnectWithTimeout(10000);
 
   topicsToPublish = 2; //adjust based on the number of topics 
@@ -211,7 +223,7 @@ void loopDevMode()
     //don't worry about resetting variables, that will happen when the ESP wakes
     mqttClient.disconnect(false);
     devModeEnd(myRtcData);
-    ESP.deepSleep(TEN_SECONDS_IN_MICRO,WAKE_RF_DEFAULT);
+    ESP.deepSleep(ONE_MINUTE_IN_MICRO,WAKE_RF_DEFAULT);
   }
   currMillis = millis();
 
@@ -220,7 +232,7 @@ void loopDevMode()
     devRtcData* myRtcData = rtcMemIface.getData();
     Serial.printf("Timeout waiting to publish (infra issues?) (%d published)\r\n",topicsPublished);
     devModeEnd(myRtcData);
-    ESP.deepSleep(TEN_SECONDS_IN_MICRO,WAKE_RF_DEFAULT);
+    ESP.deepSleep(ONE_MINUTE_IN_MICRO,WAKE_RF_DEFAULT);
   }
   delay (50); 
 }
