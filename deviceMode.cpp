@@ -23,9 +23,9 @@ SOFTWARE.
 **/
 #include <Arduino.h>
 #include <ArduinoJson.h>
-#include <ESPAsyncWebServer.h> //needed by configItems.hpp
+#include <ESPAsyncWebServer.h>  //needed by configItems.hpp
 
-#include <AsyncMqttClient.h> //consider AsyncMQTT_Generic which is based on this.
+#include <AsyncMqttClient.h>  //consider AsyncMQTT_Generic which is based on this.
 #include <include/WiFiState.h>
 #include <RTCMemory.h>
 
@@ -56,7 +56,7 @@ AsyncMqttClient mqttClient;
 //
 // Sensor specific definitions
 //
-#define SHT31_ADDRESS   0x44
+#define SHT31_ADDRESS 0x44
 
 SHT31 sht;
 int topicsPublished = 0;
@@ -70,27 +70,27 @@ void onMqttPublish(uint16_t packetId) {
   topicsPublished++;
 }
 
-bool MqttConnectWithTimeout(unsigned long Timeout){
+bool MqttConnectWithTimeout(unsigned long Timeout) {
   unsigned long currMillis;
-  unsigned long  MqttStartMillis = millis();
+  unsigned long MqttStartMillis = millis();
   mqttClient.connect();
   do {
     Serial.print("`");
     currMillis = millis();
     if (currMillis - MqttStartMillis > Timeout) {
-      Serial.printf("\n\rMQTT connect timeout (%d > %d)\n\r",currMillis - MqttStartMillis, Timeout);
+      Serial.printf("\n\rMQTT connect timeout (%d > %d)\n\r", currMillis - MqttStartMillis, Timeout);
       return false;
     }
-    delay (100);
+    delay(100);
   } while (!mqttClient.connected());
 
-  Serial.printf("Connected to MQTT in %d millis\n\r",currMillis - MqttStartMillis);
+  Serial.printf("Connected to MQTT in %d millis\n\r", currMillis - MqttStartMillis);
   return true;
 }
 
 
 //
-// Device mode worker function. 
+// Device mode worker function.
 // This is used to try and restore a saved WiFi connection.
 // Performing this operation leads to faster wifi connections and reduced WiFi power draw.
 // TODO: Add connection timeout.
@@ -104,7 +104,7 @@ void DevModeWifi(devRtcData* data) {
   if (data != nullptr) {
     Serial.println("trying to restore WiFi state");
     String SsidStr = (char*)data->state.state.fwconfig.ssid;
-    if(SsidStr.equals(config_ssid)){
+    if (SsidStr.equals(config_ssid)) {
       Serial.print("saved state matches config, restoring connection to ");
       Serial.println(config_ssid);
       if (WiFi.resumeFromShutdown(data->state)) {
@@ -114,7 +114,7 @@ void DevModeWifi(devRtcData* data) {
   }
   if (!isConnectionRestored) {
     Serial.print("regular wifi connection: ");
-    Serial.printf("%s\r\n",static_cast<String>(jsonConfig["ssid"]));
+    Serial.printf("%s\r\n", static_cast<String>(jsonConfig["ssid"]));
     WiFi.persistent(false);
     Serial.print("setting hostname: ");
     Serial.println(config_hostname);
@@ -139,20 +139,20 @@ void DevModeWifi(devRtcData* data) {
 
 //may not need this. Here mostly for reference.
 void devModeEnd(devRtcData* data) {
-    if (data != nullptr) {
-      WiFi.shutdown(data->state);
-      rtcMemIface.save();
-      delay (10);
-    } else {
-      WiFi.disconnect( true );
-      delay(1);
-    }
+  if (data != nullptr) {
+    WiFi.shutdown(data->state);
+    rtcMemIface.save();
+    delay(10);
+  } else {
+    WiFi.disconnect(true);
+    delay(1);
+  }
 }
 
 
 //
 // Setup() sub-function
-// This is the vertion of the Setup() function that needs to be called when the 
+// This is the vertion of the Setup() function that needs to be called when the
 // ESP8266 is operating in staDevice mode.
 //
 // The flow for these sensors is as follows as they utilize deep sleep:
@@ -164,20 +164,19 @@ void devModeEnd(devRtcData* data) {
 // 6) send data
 // 7) deep sleep
 
-void setupDevMode()
-{
+void setupDevMode() {
   float temp_c;
   float relativeHumidity;
   //IPAddress MqttIp = MqttIp.fromString(static_cast<String>(jsonConfig["MqttIp"]));
   IPAddress MqttIp;
-  uint16_t MqttPort = 1883; //make configuable?
+  uint16_t MqttPort = 1883;  //make configuable?
 
   Wire.begin();
   Wire.setClock(100000);
   sht.begin();
 
   uint16_t stat = sht.readStatus();
-  Serial.print ("SHT sensor status: ");
+  Serial.print("SHT sensor status: ");
   Serial.print(stat, HEX);
   Serial.println();
   sht.read();
@@ -187,12 +186,10 @@ void setupDevMode()
   Serial.print(temp_c);
   Serial.print(" humidity: ");
   Serial.println(relativeHumidity);
-
+  DevModeWifi(rtcMemIface.getData());
   //Setup MQTT stuff that doesn't need wifi to set up.
   //Check if a username an PW have been provided
-  if (jsonConfig.containsKey("MqttUser") && jsonConfig["MqttUser"].size() > 0 &&
-      jsonConfig.containsKey("MqttPw") && jsonConfig["MqttPw"].size() > 0
-  ) {
+  if (jsonConfig.containsKey("MqttUser") && jsonConfig["MqttUser"].size() > 0 && jsonConfig.containsKey("MqttPw") && jsonConfig["MqttPw"].size() > 0) {
     mqttClient.setCredentials(jsonConfig["MqttUser"], jsonConfig["MqttPw"]);
   }
   //mqttClient.setClientId //consider doing this
@@ -204,7 +201,7 @@ void setupDevMode()
   Serial.println("dev mode connect to wifi");
   MqttConnectWithTimeout(10000);
 
-  topicsToPublish = 2; //adjust based on the number of topics 
+  topicsToPublish = 2;  //adjust based on the number of topics
   mqttClient.publish(jsonConfig["MqttTempTopic"], 1, false, String(temp_c).c_str());
   mqttClient.publish(jsonConfig["MqttHumTopic"], 1, false, String(relativeHumidity).c_str());
   loopMillis = millis();
@@ -212,44 +209,26 @@ void setupDevMode()
 
 
 
-void loopDevMode()
-{
+void loopDevMode() {
   unsigned long currMillis;
   unsigned int DbgSleepTime;
-  
+
   if (topicsPublished >= topicsToPublish) {
     devRtcData* myRtcData = rtcMemIface.getData();
     Serial.println("topics published, sleeping");
     //don't worry about resetting variables, that will happen when the ESP wakes
     mqttClient.disconnect(false);
     devModeEnd(myRtcData);
-    ESP.deepSleep(ONE_MINUTE_IN_MICRO,WAKE_RF_DEFAULT);
+    ESP.deepSleep(ONE_MINUTE_IN_MICRO, WAKE_RF_DEFAULT);
   }
   currMillis = millis();
 
   //timed out. Don't burn battery.
   if (currMillis - loopMillis > FIVE_SECONDS_IN_MILLS) {
     devRtcData* myRtcData = rtcMemIface.getData();
-    Serial.printf("Timeout waiting to publish (infra issues?) (%d published)\r\n",topicsPublished);
+    Serial.printf("Timeout waiting to publish (infra issues?) (%d published)\r\n", topicsPublished);
     devModeEnd(myRtcData);
-    ESP.deepSleep(ONE_MINUTE_IN_MICRO,WAKE_RF_DEFAULT);
+    ESP.deepSleep(ONE_MINUTE_IN_MICRO, WAKE_RF_DEFAULT);
   }
-  delay (50); 
+  delay(50);
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

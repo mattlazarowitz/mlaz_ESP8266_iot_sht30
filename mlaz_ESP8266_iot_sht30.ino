@@ -261,6 +261,7 @@ void setup() {
       setupReconfigMode();
       break;
     case staDevice:
+      digitalWrite(LED_BUILTIN, HIGH);
       setupDevMode();
       break;
     case apConfig:
